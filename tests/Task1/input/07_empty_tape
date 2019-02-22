@@ -1,0 +1,14 @@
+2
+S0 S1
+1
+S1
+S0
+5
+S0 a b S0 b R a R
+S0 b a S0 a R b R
+S0 a a S0 a R a R
+S0 b b S0 b R b R
+S0 # # S1 # H # H
+#####
+#####
+

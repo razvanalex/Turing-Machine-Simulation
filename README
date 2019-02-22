@@ -1,0 +1,329 @@
+------------------------------------------------------------------------------
+                        Tema 1 - Analiza Algoritmilor
+------------------------------------------------------------------------------
+
+Autor
+  Smadu Razvan-Alexandru  325CB
+
+Fisiere incluse
+  source.c
+  TuringMachine.c
+  TuringMachine.h
+  task2
+  Makefile
+  README
+
+README
+  Task-ul 1
+    Structura masinii Turing (struct TM)
+      K         - vector de stari reprezentate sub forma de string-uri
+      numK      - numarul de stari
+      F         - un vector de pointeri la starile finale din K
+      numF      - numarul starilor finale
+      crtState  - starea curenta
+      delta     - un vector de stari ce contin un arbore de tranzitii
+      numInstr  - numarul de tranzitii
+      tapes     - vector de benzi
+      headTapes - vector de pozitii alte capurilor masinii pe benzi
+      numTapes  - numarul benzilor
+
+    Structurile TTransition, TCrtLetters si TNextState
+      TNextState reprezinta structura pentru a retine o variabila pentru starea
+      urmatoare.
+      Acesta contine:
+        state   - numele starii urmatoare ca string
+        letters - literele ce trebuie scrise pe fiecare banda. Vectorul contine 
+                  numarul de benzi caractere.
+        pos     - un vector de pozitii urmatoare pentru fiecare banda.
+
+      TCrtLetters reprezinta structura pentru a retine nodurile din arborele
+      de litere (care este foarte asemenator cu un trie, cu mici diferenta)
+      Aceasta contine:
+        letter      - litera curenta
+        childLetter - un pointer la un primul nod copil (de pe nivelul urmator)
+        sibLetter   - un pointer la primul nod frate (de la acelasi nivel)
+        nextState   - este un pointer la datele pentru urmatoarea stare (pentru 
+                      ultimul nod de tip TCrtLetters)
+
+      TTransition contine starea cureta si tranzitiile asociate acestei stari.
+
+    Functii cu structura TM:
+      1. InitTM(unsigned, char**, unsigned, char**, char, unsigned, char**, 
+                unsigned, char**) 
+         Initializeaza o noua masina Turing pe baza parametrilor dati. Aceasta
+         functie face o verificare prin functia CheckValidTM() care verifica 
+         daca numarul starilor finale este mai mic decat numarul starilor 
+         initiale; verifica daca starile finale si starea initiala se regasesc 
+         in multimea tuturor starilor si verifica daca exista cel putin o 
+         banda. Dupa aceasta verificare se creaza vectorul de tranzitii care
+         rezulta dintr-un vector de stringuri ce contin informatiile necesare.
+         Functia care realizeaza aceasta operatie este createDelta(char**, 
+         unsigned, unsigned). Aceasta creaza un vector de stari curente, 
+         fiecarui element asociinudu-i un arbore de tranzitii ce contine, pe 
+         nivelui i, literele care se pot afla pe banda i. Ca si frunze, sunt 
+         retinute starea urmatoare impreuna cu literele si pozitiile asociate.
+         Acest arbore este creat prin intermediul funtiei ReadCrtState(), in
+         cadrul careia se cauta tranzitiile din delta (cel citit din fisier,
+         ca vector de stringuri) care incep cu starea curenta care este in curs
+         de creare. Se creaza arborele, iar la frunze de tip TCrtLetters se 
+         adauga tranzitia realizata de functia ReadNextState(). Aceasta pune
+         datele starii urmatoare intr-o structura de tip TNextState. 
+         Numele de stari pot avea o lungime maxima de 100 de caractere. Dupa 
+         crearea vectorului de tranzitii se initializeaza pozitia tuturor 
+         capurilor de citire la indexul 1 al fiecarei benzi (indexarea pornind 
+         de la 0). Se aloca masina Turing si apoi se maresc benzile la 
+         dimensiunea maxima (MAX_LEN_TAPE = 10000). Ulterior, se initializeaza 
+         si ceilalti parametri ai masinii si se returneaza masina nou creata.
+
+         Nota: Masina Turing retine doar multimea tuturor starilor. Restul 
+               (starea initiala, stari finale) sunt luate din aceasta multime
+               prin utilizarea pointerilor. De aceea exista o functie numita
+               findState(char*, char**, unsigned) care cauta starile in 
+               multimea K.
+
+      2. distroyTM(TM**)
+         Distruge o entitate de timp TM* si o initializeaza la NULL. Memoria
+         alocata pentru masina este eliberata.
+      
+      3. freeArray(char***, int n)
+         Este o functie care nu este legata in mod direct de masina Turing
+         insasi. Ajuta la eliberarea memoriei unui vector de string-uri. Este
+         folosita si in functia distroyTM. 
+
+      4. findState(char*, char**, unsigned) 
+         Cauta starea data ca primul parametru din vectorul de string-uri.
+         Parametrul unsigned reprezinta numarul de string-uri. Returneaza un
+         pointer la prima aparitie a unui string in vectorul de string-uri;
+         altfel returneaza NULL;
+      
+      5. runTM(FILE*, TM*)
+         Ruleaza masina turing data ca parametru si scrie output-ul in fisier.
+
+    Rularea masinii Turing
+       Pentru a verifica daca masina Turing se blocheaza, se retine intr-un
+       vector de int-uri pozitiile fiecarui cap (head tape). Se sare cu citirea
+       peste caracterele '#' de la inceputul benzilor si se incepe executia 
+       propriu-zisa. Algoritm:
+         + cat timp nu s-a ajuns la o stare finala
+         | - se retine pozitia tuturor cursoarelor (heads tape) si starea 
+         |   curenta
+         | - se executa instructiunea
+         | - se verifica daca starea curenta si pozitia tuturor capetelor sunt 
+         |   ca inaintea executiei
+         | - daca da atunci masina e blocata si return
+         | - daca nu atunci trece la urmatoarea instructiune
+         +-- sfarsit cat timp
+
+       Executia intructiunilor
+         Instructiunile sunt puse in vectorul de tip TTransition din masina 
+         Turing. Functia moveToInstruction(TM*) cauta instructiunea pentru 
+         starea curenta (fetch-decode) si o executa (execute). In cazul in 
+         care s-a gasit instructinea se scriu literele pe fiecare banda,
+         se trece in starea urmatoare si se muta capul de citire/scriere de
+         pe fiecare banda conform lui delta. Daca instructiunea nu e gasita,
+         masina Turing se blocheaza. 
+       
+       Finalitatea
+         La final, dupa terminarea executiei (in cazul in care masina nu
+         cicleaza sau s-a blocat) se afiseaza fie output-ul pentru cazul in 
+         care masina a rulat cu succes, fie mesajul "The machine has blocked!".
+         Printarea output-ului este realizata prin functia printTapes(FILE*, 
+         TM*) care trece prin fiecare banda (sir de caractere) si printeaza 
+         numai acele caractere diferite de '#'. Fiecare banda este afisata pe 
+         linie separata. 
+
+    Citirea datelor din fisier si functiile utilizate
+      - Exita o functie, numita fReadString(FILE*, size_t), care citeste din 
+      fisier fie un string daca al 2-lea parametru este diferit de 0 sau toata
+      linia daca acel parametru este 0. String-ul este pastrat intr-un vector
+      alocat pe Heap a carui dimensiune de dubleaza atunci cand la citire s-a
+      atins capatul. 
+      
+      - Functia fReadStates(FILE*, int) citeste din fisier un vector de 
+      string-uri in numar de al 2lea parametru elemente. Returneaza 
+      vectorul de string-uri creat sau NULL daca esueaza alocarea. Citeste din
+      fisier vectorul tuturor starilor.
+      
+      - Functia fReadFinalStates(FILE*, char**, int, int) citeste din fisier 
+      fiecare stare finala si o cauta in vectorul K. Daca nu s-a gasit un 
+      element, se opreste citirea. Vectorul contine pointeri la elemente din 
+      vectorul K, cu alte cuvinte nu se retin de 2 ori aceleasi stari. 
+      
+      - Functia fReadInitialState(FILE*, char**, int N) este asemanatoare 
+      functiei precedente, diferenta constand in faptul ca citeste un singur 
+      string pe care in cauta in K si returneaza un pointer la el. 
+      
+      - Functia fReadLines(FILE*, int) citeste din fisier atatea linii cate 
+      sunt cerute din al doilea parametru. Este folosita pentru a citi vectorul
+      de tranzitii sub forma de vector de stringur.
+      
+      - Functia fReadTapes(FILE*, int) citeste din fisier input-urile.
+      
+      - Functia freeAll(char*, ...) este o functie cu numar variabil de 
+      parametrii folosti pentru a elibera memorie pentru mai multi pointeri, 
+      printr-o singura instructiune. Primul parametru este formatul ('%sa' 
+      pentru un array de string-uri si %ss pentru un singur string), urmat de
+      un sir de parametrii de tip char*** si char**.
+      
+      - Functia simulateTM(FILE*, int, char**, int, char**, char*, int, char**,
+      int, char**) initializeaza masina Turing, o ruleaza si o distruge dupa
+      terminarea executiei. Se apeleaza dupa citirea datelor.
+      
+      - Functia getDataFromFile(FILE*, FILE*) extrage datele din fisierul
+      de intrare dupa modelul din cerinta si apoi apeleaza functia de simulare
+      a masinii Turing de parametrii cititi. Al doilea parametru reprezita 
+      fisierul output.
+
+  Task-ul 2
+      Descriere generala:
+        Caracterul dominant este acel caracter care se regaseste in sir de cel 
+        putin [jumatate] + 1 ori din lungimea sirului. Cu alte cuvinte, daca am
+        sorta acest sir, chiar si in cel mai rau caz, caracterul dominant se 
+        va afla mereu la jumatate. 
+        
+          Ex: 1) aba => aab => a
+              2) aabaab => aaaabb => a (nu conteaza care caracter de la mijloc
+                                        - adica dreapta sau stanga)
+        
+        Prin urmare masina pe care am construit-o ruleaza in doua etape:
+          1) Sortarea literelor (adica sa le grupeze in maxim 4 grupe - 
+             - deoarece sunt 4 litere in alfabet)
+          2) Eliminarea capetelor pana cand se ajunge la jumatate de unde 
+             rezulta si rezultatul final
+
+      Nota: Nu este obligatoriu ca prima litare sa fie a b c d. Sortarea se 
+            realizeaza dupa modul in care sunt distribuite literele. 
+            Pot aparea in orice ordinea. Caracterul dominant tot o sa se 
+            afle in mijlocul sirului.
+
+      Masina Turing pe care am gasit-o are 54 de stari, fiecare fiind 
+      codificate astfel:
+        1) Pentru starile ale caror nume este de 2 caractere
+           - primul caracter este 'S' de la stare.
+           - al doilea caracter este 0 (starea initiala) sau f (starea finala)
+        2) Pentru starile ale caror nume este de 3 caractere
+           - primul caracter este 'S' de la stare.
+           - al doilea caracter este litera care este in curs de sortare.
+           - al treilea caracter este un numar de ordine
+        3) Pentru starile ale caror nume este de 3 caractere
+           - primul caracter este 'S' de la stare.
+           - al doilea caracter este litera care este in curs de sortare.
+           - al treilea caracter este litera care trebuie schimbata in locul
+             literei de sortat
+           - al patrulea caracter este un numar de ordine
+
+           Nota: Exita cateva stari de forma Safx unde x este un numar care 
+                 sunt utilizate in a 2a etapa a algoritmului si anume de 
+                 prelucrarea a rezultatului (af - afisare)
+
+      Starea initiala este S0, iar starea finala este Sf. Aceasta masina nu 
+      foloseste litere in plus; doar cele 4 litere ale alfabetului.
+
+      Descrierea algoritmului
+        1. Se citeste primul caracter X (cu X = {a, b, c, d});
+        2. Se citeste urmatorul caracter Y (cu Y = {a, b, c, d});
+        3. Se compara X cu Y
+          a) Daca Y != X
+               - Se cauta urmatorul caracter X din sir si se inlocuieste cu Y,
+                 iar apoi primul Y se va inlocui cu X;
+               - Daca nu exista un alt caracter X (toti X sunt sortati), atunci 
+                 se reia algoritmul plecand de la caracterul Y;
+          b) Daca Y == X
+               - se sare peste caracter;
+        
+      Exemplu de rulare
+        Fie sirul de caractere: aaccabbaa. Cu caracterul '^' este notata 
+        pozitia cursorului si cu | caracterul care trebuie schimbat. In 
+        continuare o sa fie prezentat doar principiul, nu si executia exacta 
+        a masinii Turing, pentru simplitate si din motive de redactare.
+
+        aaccabbaa => aaccabbaa => aaccabbaa => aaccabbaa => aaccabbaa => 
+        ^             ^             ^            |^           | ^ 
+
+        aacccbbaa => aacccbbaa => aacccbbaa => aaaccbbaa => aaaccbbaa => 
+          | ^          |^           ^            ^             ^    
+
+        aaaccbbaa => aaaccbbaa => aaaccbbaa => aaaccbbaa => aaaccbbca =>
+           |^           | ^          |  ^         |   ^        |   ^
+        
+        aaaccbbca => aaaccbbca => aaaccbbca => aaaccbbca => aaaacbbca =>
+           |  ^         | ^          |^           ^            ^
+
+        aaaacbbca => aaaacbbca => aaaacbbca => aaaacbbca => aaaacbbca => 
+            ^            |^           | ^          |  ^         |   ^
+
+        aaaacbbcc => aaaacbbcc => aaaacbbcc => aaaacbbcc => aaaacbbcc =>
+            |   ^        |  ^         | ^          |^           ^
+        
+        aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc =>
+            ^             ^            |^           | ^          |  ^
+        
+                  +------ aici inseamna ca litera 'a' e sortata        
+                  V
+        aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc => 
+             |   ^        |  ^         | ^          |^           ^
+
+                  +------ se trece la urmatoarea litera de sortat ('b')
+                  V
+        aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc =>
+            ^             ^             ^             ^            |^
+
+                  +------ aici inseamna         se trece le urmatoarea litera
+                  |        ca litera 'b'              de sortat ('c')
+                  |          e sortata                   |
+                  V                                      V
+        aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbcc =>
+               | ^          |^           ^           ^             ^
+        
+                               +-----   S-a terminat prima
+                               |      etapa. Acum se afiseaza
+                               |         rezultatul final
+                               V
+        aaaaabbcc => aaaaabbcc => aaaaabbcc => aaaaabbc  => aaaaabbc  =>
+                ^             ^           ^            ^           ^
+
+        aaaaabbc  => aaaaabbc  => aaaaabbc  => aaaaabbc  => aaaaabbc  =>
+              ^           ^           ^           ^           ^
+
+        aaaaabbc  => aaaaabbc  => aaaaabbc  => aaaaabbc  =>  aaaabbc  =>
+         ^           ^           ^             ^            ^
+
+         aaaabbc  =>  aaaabbc  =>  aaaabbc  =>  aaaabbc  =>  aaaabbc  =>
+         ^             ^             ^             ^             ^
+
+         aaaabbc  =>  aaaabbc  =>  aaaabbc  =>  aaaabb   =>  aaaabb   =>
+               ^             ^           ^            ^           ^
+
+         aaaabb   =>  aaaabb   =>  aaaabb   =>  aaaabb   =>  aaaabb   =>
+             ^           ^           ^           ^           ^      
+
+         aaaabb   =>  aaaabb   =>   aaabb   =>   aaabb   =>   aaabb   =>
+        ^             ^            ^             ^             ^
+
+          aaabb   =>   aaabb   =>   aaabb   =>   aaabb   =>   aaabb   =>
+            ^             ^             ^             ^           ^
+
+          aaab    =>   aaab    =>   aaab    =>   aaab    =>   aaab    =>
+              ^           ^           ^           ^           ^
+        
+          aaab    =>   aaab    =>    aab    =>    aab    =>    aab    =>
+         ^             ^            ^             ^             ^
+
+           aab    =>    aab    =>    aab    =>    aa     =>    aa     =>
+             ^             ^           ^            ^           ^
+
+           aa     =>    aa     =>    aa     =>     a     =>     a     =>
+           ^           ^             ^            ^             ^
+
+            a     =>     a     =>     a     => HALT
+             ^           ^           ^
+
+
+    Nota finala: La checker s-a obtinut 100/100 rulat pe o masina fizca si una 
+          virtuala. Timp de executie (real) checker (time ./checker): 
+                - sub 3 secunde (in general 1.8s) pe masina fizica (i3 2.2GHz)
+                - aprox. 15 secunde pe masina virtuala
+          La rularea cu valgrind, fiecare test in parte, nu s-au obtinut 
+          memory leak-uri.
+          Memoria maxima utilizata pentru testul 12, prin Visual Studio 2013: 
+                - aprox. 2.5Mb

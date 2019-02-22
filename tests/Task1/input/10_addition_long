@@ -1,0 +1,19 @@
+3
+carry no_carry finish
+1
+finish
+no_carry
+10
+no_carry 0 0 no_carry # R 0 R
+no_carry 0 1 no_carry # R 1 R
+no_carry 1 0 no_carry # R 1 R
+no_carry 1 1 carry # R 0 R
+no_carry # # finish # H # H
+carry 0 0 no_carry # R 1 R
+carry 0 1 carry # R 0 R
+carry 1 0 carry # R 0 R
+carry 1 1 carry # R 1 R
+carry # # finish # H 1 H
+#01010010101011110010000011111101001010101010010001111111100101011010010101010101000011101010101011#
+#00101010010111110000101010101010000110101010010011101001010101001100110010011101001001111000001111#
+

@@ -1,0 +1,18 @@
+3
+S0 S1 S2
+1
+S2
+S0
+9
+S0 a a S0 a H a R
+S0 a b S0 a H b R
+S0 b a S0 b H a R
+S0 b b S0 b H b R
+S0 a # S1 a H # H
+S0 b # S1 b H # H
+S1 a # S1 # R a R
+S1 b # S1 # R b R
+S1 # # S2 # H # H
+#abab#
+#bbba#
+
